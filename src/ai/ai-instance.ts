@@ -1,12 +1,10 @@
-import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai';
+'use server';
+/ ai/ai-instance.ts
+import {GenkitAILocal} from '@genkit-ai/googleai';
+import {init} from 'genkit';
 
-export const ai = genkit({
-  promptDir: './prompts',
-  plugins: [
-    googleAI({
-      apiKey: process.env.GOOGLE_GENAI_API_KEY,
-    }),
-  ],
-  model: 'googleai/gemini-2.0-flash',
+const model = new GenkitAILocal({
+  model: 'gemini-1.5-pro-002',
 });
+
+export const ai = init({defaultModel: model});
