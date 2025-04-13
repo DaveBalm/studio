@@ -9,7 +9,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:extension": "next build && zip -r noteflow.zip out manifest.json background.js content.js images/",
+    "postbuild": "cp -r public/images out/"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.0.4",
