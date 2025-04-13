@@ -16,15 +16,26 @@ interface Task {
 export function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
 
   useEffect(() => {
     // Load tasks from local storage or a database
     const initialTasks = [
       {id: '1', title: 'Sample task 1', completed: false},
       {id: '2', title: 'Sample task 2', completed: true},
+      {id: '3', title: 'Another task to do', completed: false},
     ];
     setTasks(initialTasks);
   }, []);
+
+  useEffect(() => {
+    // Filter tasks based on search term
+    const results = tasks.filter((task) =>
+      task.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredTasks(results);
+  }, [searchTerm, tasks]);
 
   const handleTaskTitleChange = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -52,6 +63,11 @@ export function Tasks() {
     );
   };
 
+    const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(event.target.value);
+    };
+
+
   return (
     <Card>
       <CardHeader>
@@ -67,8 +83,17 @@ export function Tasks() {
           />
           <Button onClick={handleAddTask}>Add Task</Button>
         </div>
+
+        <Input
+            type="search"
+            placeholder="Search tasks..."
+            value={searchTerm}
+            onChange={handleSearch}
+        />
+
+
         <div>
-          {tasks.map((task) => (
+          {filteredTasks.map((task) => (
             <div
               key={task.id}
               className="flex items-center justify-between p-2 rounded-md bg-secondary"

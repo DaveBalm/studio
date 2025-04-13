@@ -6,6 +6,7 @@ import {Textarea} from '@/components/ui/textarea';
 import {Button} from '@/components/ui/button';
 import {Icons} from '@/components/icons';
 import {Badge} from '@/components/ui/badge';
+import {Input} from '@/components/ui/input';
 
 interface Note {
   id: string;
@@ -16,15 +17,27 @@ interface Note {
 export function Notes() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNoteContent, setNewNoteContent] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
 
   useEffect(() => {
     // Load notes from local storage or a database
     const initialNotes = [
-      {id: '1', content: 'Sample note 1', tags: ['example', 'note']},
-      {id: '2', content: 'Sample note 2', tags: ['sample', 'data']},
+      {id: '1', content: 'Sample note 1. This is a very important note', tags: ['example', 'note', 'important']},
+      {id: '2', content: 'Sample note 2 with some sample data', tags: ['sample', 'data']},
+      {id: '3', content: 'A quick note about react components', tags: ['react', 'components']},
     ];
     setNotes(initialNotes);
   }, []);
+
+  useEffect(() => {
+    // Filter notes based on search term
+    const results = notes.filter((note) =>
+      note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      note.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    setFilteredNotes(results);
+  }, [searchTerm, notes]);
 
   const handleNoteChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNewNoteContent(event.target.value);
@@ -47,6 +60,10 @@ export function Notes() {
     alert(`Tag "${tag}" clicked! Implement tag selection.`);
   };
 
+    const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(event.target.value);
+    };
+
   return (
     <Card>
       <CardHeader>
@@ -61,8 +78,16 @@ export function Notes() {
           />
           <Button onClick={handleAddNote}>Add Note</Button>
         </div>
+
+         <Input
+            type="search"
+            placeholder="Search notes..."
+            value={searchTerm}
+            onChange={handleSearch}
+        />
+
         <div>
-          {notes.map((note) => (
+          {filteredNotes.map((note) => (
             <div
               key={note.id}
               className="p-3 rounded-md bg-secondary"
@@ -73,6 +98,7 @@ export function Notes() {
                   key={tag}
                   variant="outline"
                   className="mr-2"
+                  onClick={() => handleTagClick(tag)} // Added onClick handler
                 >
                   {tag}
                 </Badge>
@@ -84,4 +110,3 @@ export function Notes() {
     </Card>
   );
 }
-
