@@ -14,7 +14,9 @@ import {
   getDocs,
   deleteDoc,
   onSnapshot,
+  subscribeWithRetry,
 } from '@/firebase/firebase';
+import { ScrollArea } from './ui/scroll-area';
 
 interface Task {
   id: string;
@@ -31,14 +33,20 @@ export function Tasks() {
   useEffect(() => {
     const tasksCollection = collection(db, 'tasks');
 
-    const unsubscribe = onSnapshot(tasksCollection, (snapshot) => {
-      const newTasks = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        title: doc.data().title,
-        completed: doc.data().completed,
-      }));
-      setTasks(newTasks);
-    });
+          const unsubscribe = subscribeWithRetry(
+            tasksCollection,
+            (snapshot) => {
+              const newTasks = snapshot.docs.map((doc) => ({
+                id: doc.id,
+                title: doc.data().title,
+                completed: doc.data().completed,
+              }));
+              setTasks(newTasks);
+            },
+            (error) => {
+              console.error('Error listening to tasks:', error);
+            }
+          );
 
     return () => unsubscribe();
   }, []);
@@ -117,11 +125,11 @@ export function Tasks() {
         />
 
 
-        <div>
+        <ScrollArea className="h-[200px] w-full rounded-md border">
           {filteredTasks.map((task) => (
             <div
               key={task.id}
-              className="flex items-center justify-between p-2 rounded-md bg-secondary"
+              className="flex items-center justify-between p-2 rounded-md hover:bg-accent"
             >
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -145,7 +153,7 @@ export function Tasks() {
               </Button>
             </div>
           ))}
-        </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );

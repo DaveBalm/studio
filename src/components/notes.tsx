@@ -13,11 +13,16 @@ import {
   getDocs,
   deleteDoc,
   onSnapshot,
+  subscribeWithRetry,
 } from '@/firebase/firebase';
+import { Icons } from './icons';
+import { Badge } from './ui/badge';
+import { ScrollArea } from './ui/scroll-area';
 
 interface Note {
   id: string;
   content: string;
+  tags?: string[];
 }
 
 export function Notes() {
@@ -25,27 +30,51 @@ export function Notes() {
   const [newNoteContent, setNewNoteContent] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [availableTags, setAvailableTags] = useState<string[]>([]);
 
   useEffect(() => {
     const notesCollection = collection(db, 'notes');
 
-    const unsubscribe = onSnapshot(notesCollection, (snapshot) => {
-      const newNotes = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        content: doc.data().content,
-      }));
-      setNotes(newNotes);
-    });
-
-    return () => unsubscribe();
+    try {
+          const unsubscribe = subscribeWithRetry(
+            notesCollection,
+            (snapshot) => {
+              const newNotes = snapshot.docs.map((doc) => ({
+                id: doc.id,
+                content: doc.data().content,
+                tags: doc.data().tags || [],
+              }));
+              setNotes(newNotes);
+                        // Extract all unique tags from notes
+                        const allTags = newNotes.reduce((acc: string[], note: Note) => {
+                            if (note.tags) {
+                                note.tags.forEach(tag => {
+                                    if (!acc.includes(tag)) {
+                                        acc.push(tag);
+                                    }
+                                });
+                            }
+                            return acc;
+                        }, []);
+                        setAvailableTags(allTags);
+            },
+            (error) => {
+              console.error('Error listening to notes:', error);
+            }
+          );
+    } catch (error) {
+      console.error('Error listening to notes:', error);
+    }
   }, []);
 
   useEffect(() => {
     const results = notes.filter((note) =>
-      note.content.toLowerCase().includes(searchTerm.toLowerCase())
+      note.content.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (selectedTags.length === 0 || note.tags?.some(tag => selectedTags.includes(tag)))
     );
     setFilteredNotes(results);
-  }, [searchTerm, notes]);
+  }, [searchTerm, notes, selectedTags]);
 
   const handleNoteChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNewNoteContent(event.target.value);
@@ -56,11 +85,13 @@ export function Notes() {
       const newNote: Note = {
         id: Date.now().toString(),
         content: newNoteContent,
+        tags: [],
       };
       try {
         const notesCollection = collection(db, 'notes');
         await setDoc(doc(notesCollection, newNote.id), {
           content: newNote.content,
+          tags: [],
         });
         setNewNoteContent('');
       } catch (error) {
@@ -72,6 +103,17 @@ export function Notes() {
     const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(event.target.value);
     };
+
+    const toggleTag = (tag: string) => {
+        setSelectedTags(prevTags => {
+            if (prevTags.includes(tag)) {
+                return prevTags.filter(t => t !== tag);
+            } else {
+                return [...prevTags, tag];
+            }
+        });
+    };
+
 
   return (
     <Card>
@@ -95,16 +137,36 @@ export function Notes() {
             onChange={handleSearch}
         />
 
-        <div>
+                <div className="flex gap-2">
+                    {availableTags.map((tag) => (
+                        <Badge
+                            key={tag}
+                            variant={selectedTags.includes(tag) ? "primary" : "secondary"}
+                            onClick={() => toggleTag(tag)}
+                            className="cursor-pointer"
+                        >
+                            {tag}
+                        </Badge>
+                    ))}
+                </div>
+
+        <ScrollArea className="h-[200px] w-full rounded-md border">
           {filteredNotes.map((note) => (
             <div
               key={note.id}
-              className="p-3 rounded-md bg-secondary"
+              className="p-3 rounded-md hover:bg-accent"
             >
               <p className="text-sm">{note.content}</p>
+                            {note.tags && note.tags.length > 0 && (
+                                <div className="flex gap-1 mt-2">
+                                    {note.tags.map(tag => (
+                                        <Badge key={tag}>{tag}</Badge>
+                                    ))}
+                                </div>
+                            )}
             </div>
           ))}
-        </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );
