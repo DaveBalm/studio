@@ -4,14 +4,20 @@ import {useState, useEffect} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Textarea} from '@/components/ui/textarea';
 import {Button} from '@/components/ui/button';
-import {Icons} from '@/components/icons';
-import {Badge} from '@/components/ui/badge';
 import {Input} from '@/components/ui/input';
+import {
+  db,
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  deleteDoc,
+  onSnapshot,
+} from '@/firebase/firebase';
 
 interface Note {
   id: string;
   content: string;
-  tags: string[];
 }
 
 export function Notes() {
@@ -21,20 +27,22 @@ export function Notes() {
   const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
 
   useEffect(() => {
-    // Load notes from local storage or a database
-    const initialNotes = [
-      {id: '1', content: 'Sample note 1. This is a very important note', tags: ['example', 'note', 'important']},
-      {id: '2', content: 'Sample note 2 with some sample data', tags: ['sample', 'data']},
-      {id: '3', content: 'A quick note about react components', tags: ['react', 'components']},
-    ];
-    setNotes(initialNotes);
+    const notesCollection = collection(db, 'notes');
+
+    const unsubscribe = onSnapshot(notesCollection, (snapshot) => {
+      const newNotes = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        content: doc.data().content,
+      }));
+      setNotes(newNotes);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    // Filter notes based on search term
     const results = notes.filter((note) =>
-      note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      note.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+      note.content.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredNotes(results);
   }, [searchTerm, notes]);
@@ -43,21 +51,22 @@ export function Notes() {
     setNewNoteContent(event.target.value);
   };
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (newNoteContent.trim() !== '') {
       const newNote: Note = {
         id: Date.now().toString(),
         content: newNoteContent,
-        tags: [],
       };
-      setNotes([...notes, newNote]);
-      setNewNoteContent('');
+      try {
+        const notesCollection = collection(db, 'notes');
+        await setDoc(doc(notesCollection, newNote.id), {
+          content: newNote.content,
+        });
+        setNewNoteContent('');
+      } catch (error) {
+        console.error('Error adding note:', error);
+      }
     }
-  };
-
-  const handleTagClick = (tag: string) => {
-    // Implement tag selection logic here
-    alert(`Tag "${tag}" clicked! Implement tag selection.`);
   };
 
     const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,16 +102,6 @@ export function Notes() {
               className="p-3 rounded-md bg-secondary"
             >
               <p className="text-sm">{note.content}</p>
-              {note.tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className="mr-2"
-                  onClick={() => handleTagClick(tag)} // Added onClick handler
-                >
-                  {tag}
-                </Badge>
-              ))}
             </div>
           ))}
         </div>

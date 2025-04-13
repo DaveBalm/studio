@@ -6,6 +6,15 @@ import {Input} from '@/components/ui/input';
 import {Button} from '@/components/ui/button';
 import {Icons} from '@/components/icons';
 import {Checkbox} from '@/components/ui/checkbox';
+import {
+  db,
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  deleteDoc,
+  onSnapshot,
+} from '@/firebase/firebase';
 
 interface Task {
   id: string;
@@ -20,17 +29,21 @@ export function Tasks() {
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
 
   useEffect(() => {
-    // Load tasks from local storage or a database
-    const initialTasks = [
-      {id: '1', title: 'Sample task 1', completed: false},
-      {id: '2', title: 'Sample task 2', completed: true},
-      {id: '3', title: 'Another task to do', completed: false},
-    ];
-    setTasks(initialTasks);
+    const tasksCollection = collection(db, 'tasks');
+
+    const unsubscribe = onSnapshot(tasksCollection, (snapshot) => {
+      const newTasks = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        title: doc.data().title,
+        completed: doc.data().completed,
+      }));
+      setTasks(newTasks);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    // Filter tasks based on search term
     const results = tasks.filter((task) =>
       task.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -43,24 +56,36 @@ export function Tasks() {
     setNewTaskTitle(event.target.value);
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (newTaskTitle.trim() !== '') {
       const newTask: Task = {
         id: Date.now().toString(),
         title: newTaskTitle,
         completed: false,
       };
-      setTasks([...tasks, newTask]);
-      setNewTaskTitle('');
+      try {
+        const tasksCollection = collection(db, 'tasks');
+        await setDoc(doc(tasksCollection, newTask.id), {
+          title: newTask.title,
+          completed: newTask.completed,
+        });
+        setNewTaskTitle('');
+      } catch (error) {
+        console.error('Error adding task:', error);
+      }
     }
   };
 
-  const handleTaskComplete = (id: string, completed: boolean) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? {...task, completed: completed} : task
-      )
-    );
+  const handleTaskComplete = async (id: string, completed: boolean) => {
+    try {
+      const tasksCollection = collection(db, 'tasks');
+      await setDoc(doc(tasksCollection, id), {
+        title: tasks.find((task) => task.id === id)!.title,
+        completed: completed,
+      });
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
   };
 
     const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
