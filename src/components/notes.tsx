@@ -6,7 +6,6 @@ import {Textarea} from '@/components/ui/textarea';
 import {Button} from '@/components/ui/button';
 import {Icons} from '@/components/icons';
 import {Badge} from '@/components/ui/badge';
-import {suggestTags} from '@/ai/flows/suggest-tags';
 
 interface Note {
   id: string;
@@ -17,7 +16,6 @@ interface Note {
 export function Notes() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNoteContent, setNewNoteContent] = useState('');
-  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
 
   useEffect(() => {
     // Load notes from local storage or a database
@@ -32,7 +30,7 @@ export function Notes() {
     setNewNoteContent(event.target.value);
   };
 
-  const handleAddNote = async () => {
+  const handleAddNote = () => {
     if (newNoteContent.trim() !== '') {
       const newNote: Note = {
         id: Date.now().toString(),
@@ -41,10 +39,6 @@ export function Notes() {
       };
       setNotes([...notes, newNote]);
       setNewNoteContent('');
-
-      // GenAI call for tag suggestions
-      const tagSuggestions = await suggestTags({noteContent: newNoteContent});
-      setSuggestedTags(tagSuggestions.tags);
     }
   };
 
@@ -66,23 +60,6 @@ export function Notes() {
             placeholder="Enter your note here..."
           />
           <Button onClick={handleAddNote}>Add Note</Button>
-        </div>
-        <div>
-          {suggestedTags.length > 0 && (
-            <div className="flex gap-2">
-              Suggested tags:
-              {suggestedTags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  onClick={() => handleTagClick(tag)}
-                  className="cursor-pointer"
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
         </div>
         <div>
           {notes.map((note) => (
@@ -107,3 +84,4 @@ export function Notes() {
     </Card>
   );
 }
+
