@@ -19,8 +19,8 @@ const subscribeWithRetry = (
   collectionRef: any,
   onSuccess: any,
   onError: any,
-  maxRetries = 5,
-  delay = 1000
+  maxRetries = 10,
+  delay = 2000
 ) => {
   let retries = 0;
 
@@ -65,3 +65,5 @@ const subscribeWithRetry = (
 };
 
 export { db, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, subscribeWithRetry };
+
+    
